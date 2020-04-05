@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 
 app = FastAPI()
-
+app.count = 0
 
 @app.get("/")
 def root():
@@ -25,7 +25,10 @@ async def post_response():
 @app.put("/method")
 async def put_response():
     return  {"method": "PUT"}
-
+    
+@app.delete("/method")
+async def del_response():
+    return  {"method": "DELETE"}
 class Patient_data(BaseModel):
     name: str
     surename: str
@@ -37,8 +40,6 @@ class PatientResponse(BaseModel):
 
 @app.post("/patient", response_model=PatientResponse)
 def new_patient(rq: Patient_data):
-    patient = PatientResponse(patient=rq, id = new_patient.id)
-    new_patient.id += 1
+    patient = PatientResponse(patient=rq, id = app.count)
+    app.count += 1
     return patient
-
-new_patient.id = 0
