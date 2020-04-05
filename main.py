@@ -26,15 +26,19 @@ async def post_response():
 async def put_response():
     return  {"method": "PUT"}
 
-class PatientRequest(BaseModel):
+class Patient_data(BaseModel):
     name: str
     surename: str
 
 class PatientResponse(BaseModel):
     id: int
-    patient: Dict
+    patient: Patient_data
+
+
 @app.post("/patient", response_model=PatientResponse)
-def new_patient(rq: PatientRequest):
+def new_patient(rq: Patient_data):
+    patient = PatientResponse(patient=rq.dict(), id = new_patient.id)
     new_patient.id += 1
-    return PatientResponse(patient=rq.dict(), id = new_patient.id)
-new_patient.id = -1
+    return patient
+
+new_patient.id = 0
