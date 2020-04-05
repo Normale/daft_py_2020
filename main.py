@@ -8,18 +8,15 @@ from pydantic import BaseModel
 app = FastAPI()
 
 
-@app.get("/")
+@app.get("/method")
 def get_response():
     return {"method": "GET"}
 
-@app.post("/")
+@app.post("/method")
 def post_response():
     return  {"method": "POST"}
 
-@app.delete("/")
-def delete_response():
-    return  {"method": "DELETE"}
     
-@app.put("/")
+@app.put("/method")
 def put_response():
     return  {"method": "PUT"}
