@@ -37,7 +37,7 @@ class PatientResponse(BaseModel):
 
 @app.post("/patient", response_model=PatientResponse)
 def new_patient(rq: Patient_data):
-    patient = PatientResponse(patient=rq.dict(), id = new_patient.id)
+    patient = PatientResponse(patient=rq, id = new_patient.id)
     new_patient.id += 1
     return patient
 
