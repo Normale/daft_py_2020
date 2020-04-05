@@ -1,6 +1,6 @@
 from typing import Dict
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 from pydantic import BaseModel
 
@@ -50,3 +50,10 @@ def new_patient(rq: Patient_data):
     patient = PatientResponse(id = app.count, patient=rq)
     app.count += 1
     return patient
+
+@app.get("/patient/{id}")
+def receive_patient(id: int):
+    if id < len(app.patients):
+        return app.patients[id-1]
+    else:
+        raise HTTPException(status_code=204, detail="Index not found")
