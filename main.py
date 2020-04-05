@@ -47,6 +47,6 @@ class PatientResponse(BaseModel):
 @app.post("/patient", response_model=PatientResponse)
 def new_patient(rq: Patient_data):
     app.patients.append(rq)
-    # patient = PatientResponse(id = app.count, patient=rq)
+    patient = PatientResponse(id = app.count, patient=rq)
     app.count += 1
-    return app.patients
+    return patient
