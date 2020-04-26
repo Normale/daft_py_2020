@@ -74,7 +74,6 @@ def login(response: Response, session_token: str = Depends(login_check_cred)):
     response.status_code = status.HTTP_302_FOUND
     response.headers["Location"] = "/welcome"
     response.set_cookie(key="session_token", value=session_token)
-    response = RedirectResponse(url='/welcome')
 
 
 #@app.get("/logout") # for easier testing in the browser
