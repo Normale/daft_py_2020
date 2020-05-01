@@ -131,4 +131,3 @@ dmypy.json
 #venv and vsc files
 daft_py
 .vscode
-db
