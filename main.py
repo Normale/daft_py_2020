@@ -1,136 +1,112 @@
-from starlette.responses import RedirectResponse
-from fastapi import FastAPI, Request, Response, status, Cookie, HTTPException, Depends
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
-from hashlib import sha256
 import secrets
+from typing import Dict, Optional
 
-# for debug
-'''from fastapi.encoders import jsonable_encoder
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse'''
-# end
-
-app = FastAPI()
-security = HTTPBasic()
-templates = Jinja2Templates(directory="templates")
-app.secret_key = "wUYwdjICbQP70WgUpRajUwxnGChAKmRtfQgYASazava4p5In7pZpFPggdB4JDjlv"
-app.patients={}
-app.next_patient_id=0
-app.users={"trudnY":"PaC13Nt"}
-app.sessions={}
-
-MESSAGE_UNAUTHORIZED = "Log in to access this page."
-
-# for debug
-'''@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    print(jsonable_encoder({"detail": exc.errors(), "body": exc.body}))
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
-    )'''
-# end
-
-@app.get("/")
-def root():
-    return {"message": "Hello World during the coronavirus pandemic!"}
-
-def check_cookie(session_token: str = Cookie(None)):
-    if session_token not in app.sessions:
-        session_token = None
-    return session_token
-
-@app.get("/welcome")
-def welcome(request: Request, response: Response, session_token: str = Depends(check_cookie)):
-    if session_token is None:
-        response.status_code = status.HTTP_401_UNAUTHORIZED
-        return MESSAGE_UNAUTHORIZED
-    username = app.sessions[session_token]
-    return templates.TemplateResponse("welcome.html", {"request": request, "user": username})
-
-def login_check_cred(credentials: HTTPBasicCredentials = Depends(security)):
-    correct = False
-    for username, password in app.users.items():
-        correct_username = secrets.compare_digest(credentials.username, username)
-        correct_password = secrets.compare_digest(credentials.password, password)
-        if (correct_username and correct_password):
-            correct = True
-    if not correct:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect login or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    session_token = sha256(bytes(f"{credentials.username}{credentials.password}{app.secret_key}", encoding='utf8')).hexdigest()
-    app.sessions[session_token]=credentials.username
-    return session_token
+from fastapi import Depends, FastAPI, Response, status, Request, HTTPException
+from fastapi.templating import Jinja2Templates
+from fastapi.security import APIKeyCookie, HTTPBasic, HTTPBasicCredentials
+from jose import jwt
+from pydantic import BaseModel
+from starlette.responses import RedirectResponse
 
 
-#@app.get("/login") # for easier testing in the browser
-@app.post("/login")
-def login(response: Response, session_token: str = Depends(login_check_cred)):
-    response.status_code = status.HTTP_302_FOUND
-    response.headers["Location"] = "/welcome"
-    response.set_cookie(key="session_token", value=session_token)
-
-
-#@app.get("/logout") # for easier testing in the browser
-@app.post("/logout")
-def logout(response: Response, session_token: str = Depends(check_cookie)):
-    if session_token is None:
-        response.status_code = status.HTTP_401_UNAUTHORIZED
-        return MESSAGE_UNAUTHORIZED
-    response.status_code = status.HTTP_302_FOUND
-    response.headers["Location"] = "/"
-    app.sessions.pop(session_token)
-
-@app.get("/method")
-@app.post("/method")
-@app.put("/method")
-@app.delete("/method")
-def get_method(request: Request):
-    return {"method": str(request.method)}
-
-class PatientRq(BaseModel):
+class Patient(BaseModel):
     name: str
     surname: str
 
-# note: it is possible to use "name: str = Body(None), surname..." instead of "rq: PatientRq"
+
+class DaftAPI(FastAPI):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.counter: int = 0
+        self.storage: Dict[int, Patient] = {}
+        self.security = HTTPBasic(auto_error=False)
+        self.secret_key = "kluczyk"
+        self.API_KEY = "session"
+        self.cookie_sec = APIKeyCookie(name=self.API_KEY, auto_error=False)
+        self.templates = Jinja2Templates(directory="templates")
+
+
+app = DaftAPI()
+
+
+def is_logged(session: str = Depends(app.cookie_sec), silent: bool = False):
+    try:
+        payload = jwt.decode(session, app.secret_key)
+        return payload.get("magic_key")
+    except Exception:
+        pass
+
+    if silent:
+        return False
+
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+
+def authethicate(credentials: Optional[HTTPBasicCredentials] = Depends(app.security)):
+    if not credentials:
+        return False
+
+    correct_username = secrets.compare_digest(credentials.username, "trudnY")
+    correct_password = secrets.compare_digest(credentials.password, "PaC13Nt")
+
+    if not (correct_username and correct_password):
+        return False
+    return True
+
+
+@app.get("/")
+def read_root():
+    return {"message": "Hello World during the coronavirus pandemic!"}
+
+
+@app.get("/welcome")
+def welcome(request: Request, is_logged: bool = Depends(is_logged)):
+    return app.templates.TemplateResponse(
+        "welcome.html", {"request": request, "user": "trudnY"}
+    )
+
+
+@app.post("/login")
+async def login_basic(auth: bool = Depends(authethicate)):
+    if not auth:
+        response = Response(headers={"WWW-Authenticate": "Basic"}, status_code=401)
+        return response
+
+    response = RedirectResponse(url="/welcome")
+    token = jwt.encode({"magic_key": True}, app.secret_key)
+    response.set_cookie("session", token)
+    return response
+
+
+@app.post("/logout")
+async def logout(is_logged: bool = Depends(is_logged)):
+    response = RedirectResponse(url="/")
+    response.delete_cookie("session")
+    return response
+
+
 @app.post("/patient")
-def add_patient(response: Response, rq: PatientRq, session_token: str = Depends(check_cookie)):
-    if session_token is None:
-        response.status_code = status.HTTP_401_UNAUTHORIZED
-        return MESSAGE_UNAUTHORIZED
-    pid=f"id_{app.next_patient_id}"
-    app.patients[pid]=rq.dict()
-    response.status_code = status.HTTP_302_FOUND
-    response.headers["Location"] = f"/patient/{pid}"
-    app.next_patient_id+=1
+def add_patient(patient: Patient, is_logged: bool = Depends(is_logged)):
+    app.storage[app.counter] = patient
+    response = RedirectResponse(url=f"/patient/{app.counter}")
+    app.counter += 1
+    return response
+
 
 @app.get("/patient")
-def get_all_patients(response: Response, session_token: str = Depends(check_cookie)):
-    if session_token is None:
-        response.status_code = status.HTTP_401_UNAUTHORIZED
-        return MESSAGE_UNAUTHORIZED
-    if len(app.patients) != 0:
-        return app.patients
-    response.status_code = status.HTTP_204_NO_CONTENT
+def show_patients(is_logged: bool = Depends(is_logged)):
+    return app.storage
 
-@app.get("/patient/{pid}")
-def get_patient(pid: str, response: Response, session_token: str = Depends(check_cookie)):
-    if session_token is None:
-        response.status_code = status.HTTP_401_UNAUTHORIZED
-        return MESSAGE_UNAUTHORIZED
-    if pid in app.patients:
-        return app.patients[pid]
-    response.status_code = status.HTTP_204_NO_CONTENT
 
-@app.delete("/patient/{pid}")
-def remove_patient(pid: str, response: Response, session_token: str = Depends(check_cookie)):
-    if session_token is None:
-        response.status_code = status.HTTP_401_UNAUTHORIZED
-        return MESSAGE_UNAUTHORIZED
-    app.patients.pop(pid, None)
-    response.status_code = status.HTTP_204_NO_CONTENT
+@app.get("/patient/{pk}")
+def show_patient(pk: int, is_logged: bool = Depends(is_logged)):
+    if pk in app.storage:
+        return app.storage.get(pk)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@app.delete("/patient/{pk}")
+def delte_patient(pk: int, is_logged: bool = Depends(is_logged)):
+    if pk in app.storage:
+        del app.storage[pk]
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
