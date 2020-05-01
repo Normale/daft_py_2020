@@ -44,7 +44,7 @@ async def shutdown():
 #     return {"data": data}
 
 
-@app.get("/")
+@app.get("/tracks")
 async def get_tracks(page: int = 0, per_page: int = 10):
     cursor = await app.db_connection.execute(f"SELECT * FROM tracks  ORDER BY TrackId LIMIT {per_page} OFFSET {per_page * page}")
     data = await cursor.fetchall()
