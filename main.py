@@ -54,11 +54,14 @@ async def get_tracks(page: int = 0, per_page: int = 10):
 
 
 @app.get("/tracks/composers/")
-async def get_composers(composer_name: str):
-    app.db_connection.row_factory = aiosqlite.Row
-    cursor = await app.db_connection.execute(f"SELECT * FROM tracks WHERE composer LIKE '%{composer_name}%' ORDER BY name")
-    data = await cursor.fetchall()
-    return data
+async def tracks_composers(response: Response, composer_name: str):
+	app.db_connection.row_factory = lambda cursor, x: x[0]
+	cursor = await app.db_connection.execute(f"SELECT name FROM tracks WHERE composer LIKE '%{composer_name}%' ORDER BY name")
+	tracks = await cursor.fetchall()
+	if len(tracks) == 0:
+		response.status_code = status.HTTP_404_NOT_FOUND
+		return {"detail":{"error":"Not found"}}
+	return tracks
 
 
 
