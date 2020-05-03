@@ -109,7 +109,8 @@ class Customer(BaseModel):
 @app.put("/customers/{customer_id}")
 async def customer_edit(response: Response, customer: Customer, customer_id: int):
     cursor = await app.db_connection.execute("SELECT * from customers WHERE CustomerId = ?", (customer_id,))
-    data = cursor.fetchone()
+    data = await cursor.fetchone()
+    print(data)
     if data is None:
         response.status_code = status.HTTP_404_NOT_FOUND
         return {"detail":{"error":"Not Found"}}
