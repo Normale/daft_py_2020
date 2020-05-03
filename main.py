@@ -146,4 +146,4 @@ async def get_sales_stats(category: str):
         return data
     else:
         response.status_code = status.HTTP_404_NOT_FOUND
-		return {"detail":{"error":"Unsuported category."}}
+        return {"detail":{"error":"Unsuported category."}}
