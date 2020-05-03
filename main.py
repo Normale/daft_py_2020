@@ -135,7 +135,7 @@ async def customer_edit(response: Response, customer: Customer, customer_id: int
     return customer
  
 @app.get("/sales")
-async def get_sales_stats(category: str):
+async def get_sales_stats(response: Response, category: str):
     app.db_connection.row_factory = aiosqlite.Row
     if category == "customers":
         cursor = await app.db_connection.execute(
