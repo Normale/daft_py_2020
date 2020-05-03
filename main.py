@@ -68,17 +68,14 @@ class Album(BaseModel):
     artist_id: int
 
 
-async def check_if_row_in_table(name: str, value, table: str) -> bool:
-    cursor = await app.db_connection.execute(f"SELECT * FROM {table} WHERE {name} = {value}")
-    data = await cursor.fetchall()
-    if len(data) == 0:
-        return False
-    return True
+
 
 
 @app.post("/albums/")
 async def add_album(response: Response, album: Album):
-    if check_if_row_in_table("artist_id", album.artist_id, "artists") == False:
+    cursor = await app.db_connection.execute(f"SELECT ArtistId FROM artists WHERE ArtistId = ?", (album.artist_id, ))
+    result = await cursor.fetchone()
+    if result is None:
         response.status_code = status.HTTP_404_NOT_FOUND
         return {"detail": {"error": "Not found"}}
     cursor = await app.db_connection.execute("INSERT INTO albums(Title, ArtistId) VALUES (?,?)", (album.title, album.artist_id))
