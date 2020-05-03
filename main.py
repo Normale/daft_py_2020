@@ -34,8 +34,6 @@ async def shutdown():
     await app.db_connection.close()
 
 
-
-
 # # # HOW TO USE ASYNC SQLITE
 # @app.get("/data")
 #  async def root():
@@ -52,7 +50,6 @@ async def get_tracks(page: int = 0, per_page: int = 10):
     return data
 
 
-
 @app.get("/tracks/composers/")
 async def tracks_composers(response: Response, composer_name: str):
 	app.db_connection.row_factory = lambda cursor, x: x[0]
@@ -62,7 +59,7 @@ async def tracks_composers(response: Response, composer_name: str):
 	tracks = await cursor.fetchall()
 	if len(tracks) == 0:
 		response.status_code = status.HTTP_404_NOT_FOUND
-		return {"detail":{"error":"Not found"}}
+		return {"detail": {"error": "Not found"}}
 	return tracks
 
 
@@ -71,7 +68,7 @@ class Album(BaseModel):
     artist_id: int
 
 
-async def check_if_row_in_table(name:str, value, table: str) -> bool:
+async def check_if_row_in_table(name: str, value, table: str) -> bool:
     cursor = await app.db_connection.execute(f"SELECT * FROM {table} WHERE {name} = {value}")
     data = await cursor.fetchall()
     if len(data) == 0:
@@ -79,26 +76,27 @@ async def check_if_row_in_table(name:str, value, table: str) -> bool:
     return True
 
 
-@app.post("/albums")
+@app.post("/albums/")
 async def add_album(response: Response, album: Album):
     if check_if_row_in_table("artist_id", album.artist_id, "artists") == False:
         response.status_code = status.HTTP_404_NOT_FOUND
-		return {"detail":{"error":"Not found"}}
+        return {"detail": {"error": "Not found"}}
     cursor = await app.db_connection.execute("INSERT INTO albums(Title, ArtistId) VALUES (?,?)", (album.title, album.artist_id))
     await app.db_connection.commit()
     response.status_code = status.HTTP_201_CREATED
     return {
-    "AlbumId": cursor.lastrowid,
-    "Title": album.title,
-    "ArtistId": album.artist_id
-}
+        "AlbumId": cursor.lastrowid, 
+        "Title": album.title, 
+        "ArtistId": album.artist_id
+        }
 
-@app.get(/albums/{album_id})
+
+@app.get("/albums/{album_id}")
 async def get_album(response: Response, album_id: int):
     app.db_connection.row_factory = aiosqlite.Row
     cursor = await app.db_connection.execute("SELECT Title, ArtistId FROM albums WHERE AlbumId = ?", (album_id))
     data = await cursor.fetchone()
     if data is None:
-		response.status_code = status.HTTP_404_NOT_FOUND
-		return {"detail":{"error":"Not Found"}}
-	return data
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"detail": {"error": "Not Found"}}
+    return data
