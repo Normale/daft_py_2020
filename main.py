@@ -66,4 +66,39 @@ async def tracks_composers(response: Response, composer_name: str):
 	return tracks
 
 
+class Album(BaseModel):
+    title: str
+    artist_id: int
 
+
+async def check_if_row_in_table(name:str, value, table: str) -> bool:
+    cursor = await app.db_connection.execute(f"SELECT * FROM {table} WHERE {name} = {value}")
+    data = await cursor.fetchall()
+    if len(data) == 0:
+        return False
+    return True
+
+
+@app.post("/albums")
+async def add_album(response: Response, album: Album):
+    if check_if_row_in_table("artist_id", album.artist_id, "artists") == False:
+        response.status_code = status.HTTP_404_NOT_FOUND
+		return {"detail":{"error":"Not found"}}
+    cursor = await app.db_connection.execute("INSERT INTO albums(Title, ArtistId) VALUES (?,?)", (album.title, album.artist_id))
+    await app.db_connection.commit()
+    response.status_code = status.HTTP_201_CREATED
+    return {
+    "AlbumId": cursor.lastrowid,
+    "Title": album.title,
+    "ArtistId": album.artist_id
+}
+
+@app.get(/albums/{album_id})
+async def get_album(response: Response, album_id: int):
+    app.db_connection.row_factory = aiosqlite.Row
+    cursor = await app.db_connection.execute("SELECT Title, ArtistId FROM albums WHERE AlbumId = ?", (album_id))
+    data = await cursor.fetchone()
+    if data is None:
+		response.status_code = status.HTTP_404_NOT_FOUND
+		return {"detail":{"error":"Not Found"}}
+	return data
