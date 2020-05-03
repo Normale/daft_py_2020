@@ -137,9 +137,13 @@ async def customer_edit(response: Response, customer: Customer, customer_id: int
 @app.get("/sales")
 async def get_sales_stats(category: str):
     app.db_connection.row_factory = aiosqlite.Row
-    cursor = await app.db_connection.execute(
-        '''SELECT customers.CustomerId, Email, Phone, ROUND(SUM(Total), 2) AS Sum
-        FROM invoices JOIN customers on invoices.CustomerId = customers.CustomerId
-        GROUP BY invoices.CustomerId ORDER BY Sum DESC, invoices.CustomerId''')
-    data = await cursor.fetchall()
-    return data
+    if category == "customers":
+        cursor = await app.db_connection.execute(
+            '''SELECT customers.CustomerId, Email, Phone, ROUND(SUM(Total), 2) AS Sum
+            FROM invoices JOIN customers on invoices.CustomerId = customers.CustomerId
+            GROUP BY invoices.CustomerId ORDER BY Sum DESC, invoices.CustomerId''')
+        data = await cursor.fetchall()
+        return data
+    else:
+        response.status_code = status.HTTP_404_NOT_FOUND
+		return {"detail":{"error":"Unsuported category."}}
