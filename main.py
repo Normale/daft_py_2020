@@ -56,7 +56,9 @@ async def get_tracks(page: int = 0, per_page: int = 10):
 @app.get("/tracks/composers/")
 async def tracks_composers(response: Response, composer_name: str):
 	app.db_connection.row_factory = lambda cursor, x: x[0]
-	cursor = await app.db_connection.execute(f"SELECT name FROM tracks WHERE composer LIKE '%{composer_name}%' ORDER BY name")
+	# cursor = await app.db_connection.execute(f"SELECT name FROM tracks WHERE composer LIKE '%{composer_name}%' ORDER BY name")
+	cursor = await app.db_connection.execute("SELECT Name FROM tracks WHERE Composer = ? ORDER BY Name",
+		(composer_name, ))
 	tracks = await cursor.fetchall()
 	if len(tracks) == 0:
 		response.status_code = status.HTTP_404_NOT_FOUND
