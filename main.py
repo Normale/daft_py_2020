@@ -68,9 +68,6 @@ class Album(BaseModel):
     artist_id: int
 
 
-
-
-
 @app.post("/albums/")
 async def add_album(response: Response, album: Album):
     cursor = await app.db_connection.execute(f"SELECT ArtistId FROM artists WHERE ArtistId = ?", (album.artist_id, ))
@@ -91,7 +88,7 @@ async def add_album(response: Response, album: Album):
 @app.get("/albums/{album_id}")
 async def get_album(response: Response, album_id: int):
     app.db_connection.row_factory = aiosqlite.Row
-    cursor = await app.db_connection.execute("SELECT Title, ArtistId FROM albums WHERE AlbumId = ?", (album_id))
+    cursor = await app.db_connection.execute("SELECT * FROM albums WHERE AlbumId = ?", (album_id, ))
     data = await cursor.fetchone()
     if data is None:
         response.status_code = status.HTTP_404_NOT_FOUND
