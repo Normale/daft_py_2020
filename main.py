@@ -94,3 +94,42 @@ async def get_album(response: Response, album_id: int):
         response.status_code = status.HTTP_404_NOT_FOUND
         return {"detail": {"error": "Not Found"}}
     return data
+
+
+class Customer(BaseModel):
+    company: str = None
+    address: str = None
+    city: str = None
+    state: str = None
+    country: str = None
+    postalcode: str = None
+    fax: str = None
+
+
+@app.put("/customers/{customer_id}")
+async def customer_edit(response: Response, customer: Customer, customer_id: int):
+    cursor = await app.db_connection.execute("SELECT * from customers WHERE CustomerId = ?", (customer_id,))
+    data = cursor.fetchone()
+    if data is None:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"detail":{"error":"Not Found"}}
+    update_customer = customer.dict(exclude_unset=True)
+
+    if len(update_customer) != 0:
+        setters: str = ""
+        for key in update_customer.keys():
+            setters += f"{key}=?,"
+        setters = setters[:-1]
+        query = f"UPDATE customers SET {setters} WHERE CustomerId = ?"
+
+        values = list(update_customer.values())
+        values.append(customer_id)
+
+        cursor = await app.db_connection.execute(query, values)
+        await app.db_connection.commit()
+    app.db_connection.row_factory = aiosqlite.Row
+    cursor = await app.db_connection.execute("SELECT * FROM customers WHERE CustomerId = ?",
+        (customer_id, ))
+    customer = await cursor.fetchone()
+    return customer
+ 
