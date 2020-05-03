@@ -134,8 +134,8 @@ async def customer_edit(response: Response, customer: Customer, customer_id: int
     customer = await cursor.fetchone()
     return customer
  
- @app.get("/sales")
- async def get_sales_stats(category: str):
+@app.get("/sales")
+async def get_sales_stats(category: str):
     cursor = await app.db_connection.execute(
         '''SELECT customers.CustomerId, Email, Phone, ROUND(SUM(Total), 2) AS Sum
         FROM invoices JOIN customers on invoices.CustomerId = customers.CustomerId
