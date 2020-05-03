@@ -50,3 +50,15 @@ async def get_tracks(page: int = 0, per_page: int = 10):
     cursor = await app.db_connection.execute(f"SELECT * FROM tracks  ORDER BY TrackId LIMIT {per_page} OFFSET {per_page * page}")
     data = await cursor.fetchall()
     return data
+
+
+
+@app.get("/tracks/composers/")
+async def get_composers(composer_name: str):
+    app.db_connection.row_factory = aiosqlite.Row
+    cursor = await app.db_connection.execute(f"SELECT * FROM tracks WHERE composer LIKE '%{composer_name}%' ORDER BY name")
+    data = await cursor.fetchall()
+    return data
+
+
+
